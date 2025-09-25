@@ -17,7 +17,7 @@ def jwt_required(view_func):
         try:
             token = auth_header.split(" ")[1]
             payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
-            user = Usuario.objects.get(id=payload['id'])
+            user = Usuario.objects.get(id_user=payload['id'])
             request.user = user
         except jwt.ExpiredSignatureError:
             return Response({'error': 'El token ha expirado'}, status=status.HTTP_401_UNAUTHORIZED)
@@ -34,8 +34,8 @@ def jwt_required(view_func):
 
 def generate_jwt(user):
     payload = {
-        'id': user.id,
-        'name_user': user.username,
+        'id': user.id_user,
+        'username': user.username,
         'exp': datetime.datetime.utcnow() + datetime.timedelta(minutes=30),
         'iat': datetime.datetime.utcnow()
     }

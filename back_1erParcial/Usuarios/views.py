@@ -120,7 +120,7 @@ def registrar_residente(request):
             )
             usuario.set_password(user_data['password'])
             usuario.save()
-
+            propietario = Propietario.objects.get(nombre_completo=residente_serializer.validated_data['nombre_propietario'])
             residente_data = residente_serializer.validated_data
 
             Residente.objects.create(
@@ -129,7 +129,7 @@ def registrar_residente(request):
                 tipo_residente=residente_data['tipo_residente'],
                 fecha_nacimiento=residente_data['fecha_nacimiento'],
                 id_user=usuario.id_user,
-                id_propietario_id=residente_data['id_propietario']  # con "_id" para ForeignKey
+                id_propietario=propietario.id_propietario
             )
 
             return Response({'mensaje': 'Residente registrado correctamente'}, status=status.HTTP_201_CREATED)
@@ -196,3 +196,45 @@ def actualizar_password(request, username):
 
     except Usuario.DoesNotExist:
         return Response({'error': 'Usuario no encontrado'}, status=status.HTTP_404_NOT_FOUND)
+    
+@api_view(['GET'])
+def obtener_all_usuarios(request):
+    try:
+        usuarios = list(Usuario.objects.values())
+        return Response({'usuarios': usuarios}, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+def obtener_all_personal(request):
+    try:
+        personal = list(Personal.objects.values())
+        return Response({'personal': personal}, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+def obtener_all_propietarios(request):
+    try:
+        propietarios = list(Propietario.objects.values())
+        return Response({'propietarios': propietarios}, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+def obtener_all_residentes(request):
+    try:
+        residentes = list(Residente.objects.values())
+        return Response({'residentes': residentes}, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+def listar_nombre_propietarios(request):
+    try:
+        nombres = list(
+            Propietario.objects.values_list('nombre_completo', flat=True)
+        )
+        return Response({'nombres_propietarios': nombres}, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

@@ -23,12 +23,10 @@ class PropietarioPayloadSerializer(serializers.Serializer):
     nombre_completo = serializers.CharField(max_length=100)
     telefono = serializers.CharField(max_length=20)
     fecha_nacimiento = serializers.DateField(format='%Y-%m-%d', input_formats=['%Y-%m-%d'])
-    id_user = serializers.IntegerField()  # FK requerida
 
 class ResidentePayloadSerializer(serializers.Serializer):
     nombre_completo = serializers.CharField(max_length=100)
     telefono = serializers.CharField(max_length=20)
     tipo_residente = serializers.CharField(max_length=50)
     fecha_nacimiento = serializers.DateField(format='%Y-%m-%d', input_formats=['%Y-%m-%d'])
-    id_user = serializers.IntegerField()  # FK requerida
-    id_propietario = serializers.IntegerField()  # FK requerida
+    nombre_propietario = serializers.CharField(max_length=100)

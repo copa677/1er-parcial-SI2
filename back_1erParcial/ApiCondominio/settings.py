@@ -44,6 +44,8 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'Usuarios',
+    'AreasComunes',
+    'Mascotas',
 ]
 
 MIDDLEWARE = [
