@@ -9,8 +9,7 @@ class Mascota(models.Model):
     descripcion = models.TextField()
     fecha_nacimiento = models.DateField()
     sexo = models.CharField(max_length=10)
-    id_propietario = models.IntegerField()
-    id_residencia = models.IntegerField()
+    dueno = models.CharField(max_length=100)
 
     class Meta:
         db_table = 'mascota'

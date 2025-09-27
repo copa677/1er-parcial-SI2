@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useEffect } from "react"
 import { X } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -9,39 +8,30 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { listarNombresAnfitriones } from "@/lib/Services/usuarios.service"
 
 interface VisitorFormData {
   nombre_completo: string
-  ci: string
   telefono: string
-  correo: string
-  fecha_agregacion: string
   fecha_visita: string
   estado: "Activo" | "Eliminado" | ""
-  anfitrion_tipo: "propietario" | "residente" | ""
-  anfitrion_nombre: string
+  nombre_anfitrion: string
 }
 
 interface Visitor {
   id_visitante: number
   nombre_completo: string
-  ci: string
   telefono: string
-  correo: string
   fecha_agregacion: string
   fecha_visita: string
   estado: "Activo" | "Eliminado"
-  id_propietario?: number
-  id_residente?: number
-  propietario_nombre?: string
-  residente_nombre?: string
+  nombre_anfitrion: string
 }
 
 interface VisitorsRegistrationModalProps {
   isOpen: boolean
   onClose: () => void
-  onSubmit: (data: any) => void
+  onSubmit: (data: VisitorFormData) => void
   editingVisitor?: Visitor | null
 }
 
@@ -53,46 +43,46 @@ export function VisitorsRegistrationModal({
 }: VisitorsRegistrationModalProps) {
   const [formData, setFormData] = useState<VisitorFormData>({
     nombre_completo: "",
-    ci: "",
     telefono: "",
-    correo: "",
-    fecha_agregacion: "",
     fecha_visita: "",
     estado: "",
-    anfitrion_tipo: "",
-    anfitrion_nombre: "",
+    nombre_anfitrion: "",
   })
+  const [anfitriones, setAnfitriones] = useState<{ nombre_completo: string }[]>([])
 
-  // Load data when editing
   useEffect(() => {
+    // Cargar datos de edición
     if (editingVisitor) {
       setFormData({
         nombre_completo: editingVisitor.nombre_completo,
-        ci: editingVisitor.ci,
         telefono: editingVisitor.telefono,
-        correo: editingVisitor.correo,
-        fecha_agregacion: editingVisitor.fecha_agregacion,
         fecha_visita: editingVisitor.fecha_visita,
         estado: editingVisitor.estado,
-        anfitrion_tipo: editingVisitor.id_propietario ? "propietario" : "residente",
-        anfitrion_nombre: editingVisitor.propietario_nombre || editingVisitor.residente_nombre || "",
+        nombre_anfitrion: editingVisitor.nombre_anfitrion,
       })
     } else {
-      // Reset form for new visitor
-      const today = new Date().toISOString().split("T")[0]
       setFormData({
         nombre_completo: "",
-        ci: "",
         telefono: "",
-        correo: "",
-        fecha_agregacion: today,
         fecha_visita: "",
         estado: "Activo",
-        anfitrion_tipo: "",
-        anfitrion_nombre: "",
+        nombre_anfitrion: "",
       })
     }
+
+    // Cargar anfitriones desde backend
+    const fetchAnfitriones = async () => {
+      try {
+        const data = await listarNombresAnfitriones()
+        setAnfitriones(data)
+      } catch (error) {
+        console.error("Error al cargar anfitriones:", error)
+      }
+    }
+
+    fetchAnfitriones()
   }, [editingVisitor])
+
 
   const handleInputChange = (field: keyof VisitorFormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
@@ -100,52 +90,14 @@ export function VisitorsRegistrationModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-
-    // Validate that either propietario or residente is selected, but not both
-    if (!formData.anfitrion_tipo) {
-      alert("Debe seleccionar si el anfitrión es propietario o residente")
-      return
-    }
-
-    const visitorData = {
-      nombre_completo: formData.nombre_completo,
-      ci: formData.ci,
-      telefono: formData.telefono,
-      correo: formData.correo,
-      fecha_agregacion: formData.fecha_agregacion,
-      fecha_visita: formData.fecha_visita,
-      estado: formData.estado,
-      // Set either id_propietario or id_residente based on selection
-      ...(formData.anfitrion_tipo === "propietario"
-        ? {
-            id_propietario: Math.floor(Math.random() * 10) + 1,
-            propietario_nombre: formData.anfitrion_nombre,
-            id_residente: undefined,
-            residente_nombre: undefined,
-          }
-        : {
-            id_residente: Math.floor(Math.random() * 10) + 1,
-            residente_nombre: formData.anfitrion_nombre,
-            id_propietario: undefined,
-            propietario_nombre: undefined,
-          }),
-    }
-
-    onSubmit(visitorData)
-
-    // Reset form if not editing
+    onSubmit(formData)
     if (!editingVisitor) {
-      const today = new Date().toISOString().split("T")[0]
       setFormData({
         nombre_completo: "",
-        ci: "",
         telefono: "",
-        correo: "",
-        fecha_agregacion: today,
         fecha_visita: "",
         estado: "Activo",
-        anfitrion_tipo: "",
-        anfitrion_nombre: "",
+        nombre_anfitrion: "",
       })
     }
   }
@@ -157,9 +109,9 @@ export function VisitorsRegistrationModal({
       <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
           <div>
-            <CardTitle>{editingVisitor ? "Actualizar Visitante" : "Registro de Visitante"}</CardTitle>
+            <CardTitle>{editingVisitor ? "Actualizar Visitante" : "Registrar Visitante"}</CardTitle>
             <CardDescription>
-              {editingVisitor ? "Modifica los datos del visitante" : "Registra un nuevo visitante"}
+              {editingVisitor ? "Modifica los datos del visitante" : "Agrega un nuevo visitante al sistema"}
             </CardDescription>
           </div>
           <Button variant="ghost" size="sm" onClick={onClose}>
@@ -180,38 +132,11 @@ export function VisitorsRegistrationModal({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="ci">CI (Carnet de Identidad)</Label>
-                <Input id="ci" value={formData.ci} onChange={(e) => handleInputChange("ci", e.target.value)} required />
-              </div>
-
-              <div className="space-y-2">
                 <Label htmlFor="telefono">Teléfono</Label>
                 <Input
                   id="telefono"
                   value={formData.telefono}
                   onChange={(e) => handleInputChange("telefono", e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="correo">Correo</Label>
-                <Input
-                  id="correo"
-                  type="email"
-                  value={formData.correo}
-                  onChange={(e) => handleInputChange("correo", e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="fecha_agregacion">Fecha de Agregación</Label>
-                <Input
-                  id="fecha_agregacion"
-                  type="date"
-                  value={formData.fecha_agregacion}
-                  onChange={(e) => handleInputChange("fecha_agregacion", e.target.value)}
                   required
                 />
               </div>
@@ -229,9 +154,12 @@ export function VisitorsRegistrationModal({
 
               <div className="space-y-2">
                 <Label htmlFor="estado">Estado</Label>
-                <Select value={formData.estado} onValueChange={(value) => handleInputChange("estado", value)}>
+                <Select
+                  value={formData.estado}
+                  onValueChange={(value) => handleInputChange("estado", value)}
+                >
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecciona el estado" />
+                    <SelectValue placeholder="Selecciona estado" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Activo">Activo</SelectItem>
@@ -240,35 +168,24 @@ export function VisitorsRegistrationModal({
                 </Select>
               </div>
 
-              <div className="space-y-3 md:col-span-2">
-                <Label>Tipo de Anfitrión</Label>
-                <RadioGroup
-                  value={formData.anfitrion_tipo}
-                  onValueChange={(value) => handleInputChange("anfitrion_tipo", value)}
-                  className="flex space-x-6"
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="propietario" id="propietario" />
-                    <Label htmlFor="propietario">Propietario</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="residente" id="residente" />
-                    <Label htmlFor="residente">Residente</Label>
-                  </div>
-                </RadioGroup>
-              </div>
-
               <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="anfitrion_nombre">
-                  Nombre Completo del {formData.anfitrion_tipo === "propietario" ? "Propietario" : "Residente"}
-                </Label>
-                <Input
-                  id="anfitrion_nombre"
-                  value={formData.anfitrion_nombre}
-                  onChange={(e) => handleInputChange("anfitrion_nombre", e.target.value)}
-                  placeholder={`Nombre del ${formData.anfitrion_tipo || "anfitrión"}`}
-                  required
-                />
+                <Label htmlFor="nombre_anfitrion">Nombre del Anfitrión</Label>
+                <Select
+                  value={formData.nombre_anfitrion}
+                  onValueChange={(value) => handleInputChange("nombre_anfitrion", value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona anfitrión" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {anfitriones.map((a, index) => (
+                      <SelectItem key={index} value={a.nombre_completo}>
+                        {a.nombre_completo}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
               </div>
             </div>
 
@@ -276,7 +193,9 @@ export function VisitorsRegistrationModal({
               <Button type="button" variant="outline" onClick={onClose}>
                 Cancelar
               </Button>
-              <Button type="submit">{editingVisitor ? "Actualizar Visitante" : "Registrar Visitante"}</Button>
+              <Button type="submit">
+                {editingVisitor ? "Actualizar Visitante" : "Registrar Visitante"}
+              </Button>
             </div>
           </form>
         </CardContent>

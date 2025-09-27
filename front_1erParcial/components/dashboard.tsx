@@ -13,6 +13,7 @@ import { CommonAreasTable } from "@/components/common-areas-table"
 import { PropertiesTable } from "@/components/properties-table"
 import { VisitorsTable } from "@/components/visitors-table"
 import { VehiclesTable } from "@/components/vehicles-table"
+import { ReglasTable } from "@/components/reglas-table"
 
 export function Dashboard() {
   const [activeSection, setActiveSection] = useState("residentes")
@@ -37,6 +38,8 @@ export function Dashboard() {
         return <VisitorsTable />
       case "vehiculos":
         return <VehiclesTable />
+      case "reglas":
+        return <ReglasTable />
       default:
         return <ResidentsTable />
     }

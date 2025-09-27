@@ -27,26 +27,33 @@ export function LoginForm({ onLogin }: LoginFormProps) {
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
   const [error, setError] = useState("")
+  const [success, setSuccess] = useState("")
+
 
 
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault()
-  setIsLoading(true)
-  setError("")
+    e.preventDefault()
+    setIsLoading(true)
+    setError("")
+    setSuccess("")
 
-  try {
-    const user = await login(username, password) // login real
-    console.log("Login correcto:", user.username)
+    try {
+      const user = await login(username, password)
+      console.log("Login correcto:", user.username)
 
-    // Redirigir a la vista principal del sistema
-    router.push("/dashboard") // puedes cambiar la ruta luego
-  } catch (err) {
-    setError("Usuario o contraseña incorrectos")
-    console.error("Login fallido:", err)
-  } finally {
-    setIsLoading(false)
+      setSuccess("Inicio de sesión exitoso 🎉 Redirigiendo...")
+
+      setTimeout(() => {
+        router.push("/dashboard")
+      }, 1500)
+    } catch (err) {
+      setError("Usuario o contraseña incorrectos ❌")
+      console.error("Login fallido:", err)
+    } finally {
+      setIsLoading(false)
+    }
   }
-}
+
 
 
   return (
@@ -111,6 +118,16 @@ export function LoginForm({ onLogin }: LoginFormProps) {
                   className="h-12 bg-input border-border/50 focus:border-primary focus:ring-primary/20 transition-colors"
                 />
               </div>
+              {error && (
+                <div className="w-full text-sm text-red-600 bg-red-100 border border-red-300 rounded-md px-4 py-2 text-center">
+                  {error}
+                </div>
+              )}
+              {success && (
+                <div className="w-full text-sm text-green-700 bg-green-100 border border-green-300 rounded-md px-4 py-2 text-center">
+                  {success}
+                </div>
+              )}
 
               <Button
                 type="submit"

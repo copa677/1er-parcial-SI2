@@ -1,9 +1,9 @@
 from django.urls import path
-from . import views
+from .views import listar_mascotas, registrar_mascota, actualizar_mascota, eliminar_mascota
 
 urlpatterns = [
-    path('registrar', views.registrar_mascota, name='registrar_mascota'),
-    path('editar/<int:id_mascota>', views.editar_mascota, name='editar_mascota'),
-    path('listar', views.listar_mascotas, name='listar_mascotas'),
-    path('eliminar/<int:id_mascota>', views.eliminar_mascota, name='eliminar_mascota'),
+    path('listar_mascotas', listar_mascotas, name='listar_mascotas'),
+    path('registrar_mascota', registrar_mascota, name='registrar_mascota'),
+    path('actualizar_mascota/<int:id_mascota>', actualizar_mascota, name='actualizar_mascota'),
+    path('eliminar_mascota/<int:id_mascota>', eliminar_mascota, name='eliminar_mascota'),
 ]

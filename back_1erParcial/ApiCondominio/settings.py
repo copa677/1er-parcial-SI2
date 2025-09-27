@@ -46,6 +46,11 @@ INSTALLED_APPS = [
     'Usuarios',
     'AreasComunes',
     'Mascotas',
+    'Reglas',
+    'Visitantes',
+    'Vehiculos',
+    'Propiedades',
+    'Bitacora',
 ]
 
 MIDDLEWARE = [

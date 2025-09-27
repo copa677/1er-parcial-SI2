@@ -190,3 +190,16 @@ export async function listarNombrePropietarios(): Promise<string[]> {
   const data = await res.json()
   return data.nombres_propietarios
 }
+
+// 📋 Obtener nombres de todos los anfitriones (propietarios + residentes)
+export async function listarNombresAnfitriones(): Promise<{ nombre_completo: string }[]> {
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/usuarios/listar_nombres_anfitriones`)
+
+  if (!res.ok) {
+    const error = await res.json()
+    throw new Error(error.error || "Error al listar nombres de anfitriones")
+  }
+
+  return res.json()
+}
+

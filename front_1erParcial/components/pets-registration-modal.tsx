@@ -1,7 +1,5 @@
 "use client"
 
-import type React from "react"
-
 import { useState, useEffect } from "react"
 import { X } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -9,8 +7,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Textarea } from "@/components/ui/textarea"
+
+// ✅ Importamos tu servicio
+import { listarNombresAnfitriones } from "@/lib/Services/usuarios.service"
 
 interface PetFormData {
   nombre: string
@@ -19,21 +18,18 @@ interface PetFormData {
   descripcion: string
   fecha_nacimiento: string
   sexo: "Macho" | "Hembra" | ""
-  owner_type: "Propietario" | "Residente" | ""
-  id_propietario: number | null
-  id_residente: number | null
+  dueno: string
 }
 
 interface Pet {
   id_mascota: number
+  nombre: string
   especie: string
   raza: string
-  nombre: string
   descripcion: string
   fecha_nacimiento: string
   sexo: "Macho" | "Hembra"
-  id_propietario: number | null
-  id_residente: number | null
+  dueno: string
 }
 
 interface PetsRegistrationModalProps {
@@ -43,7 +39,12 @@ interface PetsRegistrationModalProps {
   editingPet?: Pet | null
 }
 
-export function PetsRegistrationModal({ isOpen, onClose, onSubmit, editingPet }: PetsRegistrationModalProps) {
+export function PetsRegistrationModal({
+  isOpen,
+  onClose,
+  onSubmit,
+  editingPet,
+}: PetsRegistrationModalProps) {
   const [formData, setFormData] = useState<PetFormData>({
     nombre: "",
     especie: "",
@@ -51,12 +52,25 @@ export function PetsRegistrationModal({ isOpen, onClose, onSubmit, editingPet }:
     descripcion: "",
     fecha_nacimiento: "",
     sexo: "",
-    owner_type: "",
-    id_propietario: null,
-    id_residente: null,
+    dueno: "",
   })
 
-  // Load data when editing
+  // 🔹 Lista de anfitriones para el combo
+  const [anfitriones, setAnfitriones] = useState<{ nombre_completo: string }[]>([])
+
+  useEffect(() => {
+    async function fetchAnfitriones() {
+      try {
+        const data = await listarNombresAnfitriones()
+        setAnfitriones(data)
+      } catch (error) {
+        console.error("Error cargando anfitriones:", error)
+      }
+    }
+    if (isOpen) fetchAnfitriones()
+  }, [isOpen])
+
+  // 🔹 Cuando editas
   useEffect(() => {
     if (editingPet) {
       setFormData({
@@ -66,12 +80,9 @@ export function PetsRegistrationModal({ isOpen, onClose, onSubmit, editingPet }:
         descripcion: editingPet.descripcion,
         fecha_nacimiento: editingPet.fecha_nacimiento,
         sexo: editingPet.sexo,
-        owner_type: editingPet.id_propietario ? "Propietario" : "Residente",
-        id_propietario: editingPet.id_propietario,
-        id_residente: editingPet.id_residente,
+        dueno: editingPet.dueno,
       })
     } else {
-      // Reset form for new pet
       setFormData({
         nombre: "",
         especie: "",
@@ -79,62 +90,22 @@ export function PetsRegistrationModal({ isOpen, onClose, onSubmit, editingPet }:
         descripcion: "",
         fecha_nacimiento: "",
         sexo: "",
-        owner_type: "",
-        id_propietario: null,
-        id_residente: null,
+        dueno: "",
       })
     }
   }, [editingPet])
 
-  const handleInputChange = (field: keyof PetFormData, value: string | number | null) => {
+  const handleInputChange = (field: keyof PetFormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
-  }
-
-  const handleOwnerTypeChange = (value: "Propietario" | "Residente") => {
-    setFormData((prev) => ({
-      ...prev,
-      owner_type: value,
-      id_propietario: value === "Propietario" ? Math.floor(Math.random() * 10) + 1 : null,
-      id_residente: value === "Residente" ? Math.floor(Math.random() * 10) + 1 : null,
-    }))
   }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-
-    // Validate that only one owner type is selected
-    if (!formData.owner_type) {
-      alert("Debe seleccionar si la mascota pertenece a un Propietario o Residente")
+    if (!formData.dueno) {
+      alert("Debe seleccionar un dueño")
       return
     }
-
-    const petData = {
-      nombre: formData.nombre,
-      especie: formData.especie,
-      raza: formData.raza,
-      descripcion: formData.descripcion,
-      fecha_nacimiento: formData.fecha_nacimiento,
-      sexo: formData.sexo,
-      id_propietario: formData.owner_type === "Propietario" ? formData.id_propietario : null,
-      id_residente: formData.owner_type === "Residente" ? formData.id_residente : null,
-    }
-
-    onSubmit(petData)
-
-    // Reset form if not editing
-    if (!editingPet) {
-      setFormData({
-        nombre: "",
-        especie: "",
-        raza: "",
-        descripcion: "",
-        fecha_nacimiento: "",
-        sexo: "",
-        owner_type: "",
-        id_propietario: null,
-        id_residente: null,
-      })
-    }
+    onSubmit(formData)
   }
 
   if (!isOpen) return null
@@ -156,8 +127,9 @@ export function PetsRegistrationModal({ isOpen, onClose, onSubmit, editingPet }:
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="nombre">Nombre Completo</Label>
+              {/* Nombre mascota */}
+              <div className="space-y-2">
+                <Label htmlFor="nombre">Nombre de la Mascota *</Label>
                 <Input
                   id="nombre"
                   value={formData.nombre}
@@ -166,44 +138,40 @@ export function PetsRegistrationModal({ isOpen, onClose, onSubmit, editingPet }:
                 />
               </div>
 
-              <div className="space-y-2 md:col-span-2">
-                <Label>¿De quién es la mascota?</Label>
-                <RadioGroup
-                  value={formData.owner_type}
-                  onValueChange={handleOwnerTypeChange}
-                  className="flex flex-row space-x-6"
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="Propietario" id="propietario" />
-                    <Label htmlFor="propietario">Propietario</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="Residente" id="residente" />
-                    <Label htmlFor="residente">Residente</Label>
-                  </div>
-                </RadioGroup>
-              </div>
-
+              {/* Dueño: ahora un ComboBox */}
               <div className="space-y-2">
-                <Label htmlFor="especie">Especie</Label>
-                <Select value={formData.especie} onValueChange={(value) => handleInputChange("especie", value)}>
+                <Label htmlFor="dueno">Nombre del Dueño *</Label>
+                <Select
+                  value={formData.dueno}
+                  onValueChange={(value) => handleInputChange("dueno", value)}
+                >
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecciona la especie" />
+                    <SelectValue placeholder="Selecciona un dueño" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Perro">Perro</SelectItem>
-                    <SelectItem value="Gato">Gato</SelectItem>
-                    <SelectItem value="Ave">Ave</SelectItem>
-                    <SelectItem value="Pez">Pez</SelectItem>
-                    <SelectItem value="Hamster">Hamster</SelectItem>
-                    <SelectItem value="Conejo">Conejo</SelectItem>
-                    <SelectItem value="Otro">Otro</SelectItem>
+                    {anfitriones.map((a, idx) => (
+                      <SelectItem key={idx} value={a.nombre_completo}>
+                        {a.nombre_completo}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
 
+              {/* Especie */}
               <div className="space-y-2">
-                <Label htmlFor="raza">Raza</Label>
+                <Label htmlFor="especie">Especie *</Label>
+                <Input
+                  id="especie"
+                  value={formData.especie}
+                  onChange={(e) => handleInputChange("especie", e.target.value)}
+                  required
+                />
+              </div>
+
+              {/* Raza */}
+              <div className="space-y-2">
+                <Label htmlFor="raza">Raza *</Label>
                 <Input
                   id="raza"
                   value={formData.raza}
@@ -212,9 +180,13 @@ export function PetsRegistrationModal({ isOpen, onClose, onSubmit, editingPet }:
                 />
               </div>
 
+              {/* Sexo */}
               <div className="space-y-2">
-                <Label htmlFor="sexo">Sexo</Label>
-                <Select value={formData.sexo} onValueChange={(value) => handleInputChange("sexo", value)}>
+                <Label htmlFor="sexo">Sexo *</Label>
+                <Select
+                  value={formData.sexo}
+                  onValueChange={(value) => handleInputChange("sexo", value)}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecciona el sexo" />
                   </SelectTrigger>
@@ -225,8 +197,9 @@ export function PetsRegistrationModal({ isOpen, onClose, onSubmit, editingPet }:
                 </Select>
               </div>
 
+              {/* Fecha de nacimiento */}
               <div className="space-y-2">
-                <Label htmlFor="fecha_nacimiento">Fecha de Nacimiento</Label>
+                <Label htmlFor="fecha_nacimiento">Fecha de Nacimiento *</Label>
                 <Input
                   id="fecha_nacimiento"
                   type="date"
@@ -236,14 +209,15 @@ export function PetsRegistrationModal({ isOpen, onClose, onSubmit, editingPet }:
                 />
               </div>
 
+              {/* Descripción */}
               <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="descripcion">Descripción</Label>
-                <Textarea
+                <Label htmlFor="descripcion">Descripción *</Label>
+                <Input
                   id="descripcion"
                   value={formData.descripcion}
                   onChange={(e) => handleInputChange("descripcion", e.target.value)}
-                  placeholder="Describe las características de la mascota..."
-                  rows={3}
+                  placeholder="Describe las características de la mascota"
+                  required
                 />
               </div>
             </div>
@@ -252,7 +226,9 @@ export function PetsRegistrationModal({ isOpen, onClose, onSubmit, editingPet }:
               <Button type="button" variant="outline" onClick={onClose}>
                 Cancelar
               </Button>
-              <Button type="submit">{editingPet ? "Actualizar Mascota" : "Registrar Mascota"}</Button>
+              <Button type="submit">
+                {editingPet ? "Actualizar Mascota" : "Registrar Mascota"}
+              </Button>
             </div>
           </form>
         </CardContent>

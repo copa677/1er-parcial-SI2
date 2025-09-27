@@ -22,4 +22,9 @@ urlpatterns = [
     path('api/usuarios/', include('Usuarios.urls')),
     path('api/areas_comunes/', include('AreasComunes.urls')),
     path('api/mascotas/', include('Mascotas.urls')),
+    path('api/reglas/', include('Reglas.urls')),
+    path('api/visitantes/', include('Visitantes.urls')),
+    path('api/vehiculos/', include('Vehiculos.urls')),
+    path('api/propiedades/', include('Propiedades.urls')),
+    path('api/bitacora/',include('Bitacora.urls'))
 ]

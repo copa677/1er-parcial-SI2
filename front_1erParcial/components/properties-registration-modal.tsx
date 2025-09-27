@@ -1,7 +1,5 @@
 "use client"
 
-import type React from "react"
-
 import { useState, useEffect } from "react"
 import { X } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -9,6 +7,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+
+// 🔹 Importamos el servicio
+import { listarNombrePropietarios } from "@/lib/Services/usuarios.service"
 
 interface PropertyFormData {
   tipo_propiedad: string
@@ -52,7 +53,22 @@ export function PropertiesRegistrationModal({
     nombre_propietario: "",
   })
 
-  // Load data when editing
+  const [propietarios, setPropietarios] = useState<string[]>([])
+
+  // 🔹 Cargar lista de propietarios al abrir modal
+  useEffect(() => {
+    async function fetchPropietarios() {
+      try {
+        const data = await listarNombrePropietarios()
+        setPropietarios(data)
+      } catch (error) {
+        console.error("Error cargando propietarios:", error)
+      }
+    }
+    if (isOpen) fetchPropietarios()
+  }, [isOpen])
+
+  // 🔹 Cargar datos si se está editando
   useEffect(() => {
     if (editingProperty) {
       setFormData({
@@ -64,7 +80,6 @@ export function PropertiesRegistrationModal({
         nombre_propietario: editingProperty.nombre_propietario,
       })
     } else {
-      // Reset form for new property
       setFormData({
         tipo_propiedad: "",
         numero: "",
@@ -83,7 +98,6 @@ export function PropertiesRegistrationModal({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
-    // Validate required fields
     if (
       !formData.tipo_propiedad ||
       !formData.numero ||
@@ -101,18 +115,6 @@ export function PropertiesRegistrationModal({
     }
 
     onSubmit(formData)
-
-    // Reset form if not editing
-    if (!editingProperty) {
-      setFormData({
-        tipo_propiedad: "",
-        numero: "",
-        direccion: "",
-        metros_cuadrados: 0,
-        estado: "",
-        nombre_propietario: "",
-      })
-    }
   }
 
   if (!isOpen) return null
@@ -134,6 +136,7 @@ export function PropertiesRegistrationModal({
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Tipo */}
               <div className="space-y-2">
                 <Label htmlFor="tipo_propiedad">Tipo de Propiedad *</Label>
                 <Select
@@ -156,6 +159,7 @@ export function PropertiesRegistrationModal({
                 </Select>
               </div>
 
+              {/* Número */}
               <div className="space-y-2">
                 <Label htmlFor="numero">Número *</Label>
                 <Input
@@ -167,6 +171,7 @@ export function PropertiesRegistrationModal({
                 />
               </div>
 
+              {/* Dirección */}
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="direccion">Dirección *</Label>
                 <Input
@@ -178,6 +183,7 @@ export function PropertiesRegistrationModal({
                 />
               </div>
 
+              {/* Metros cuadrados */}
               <div className="space-y-2">
                 <Label htmlFor="metros_cuadrados">Metros Cuadrados *</Label>
                 <Input
@@ -190,6 +196,7 @@ export function PropertiesRegistrationModal({
                 />
               </div>
 
+              {/* Estado */}
               <div className="space-y-2">
                 <Label htmlFor="estado">Estado *</Label>
                 <Select value={formData.estado} onValueChange={(value) => handleInputChange("estado", value)}>
@@ -203,15 +210,24 @@ export function PropertiesRegistrationModal({
                 </Select>
               </div>
 
+              {/* Propietario: ahora es un ComboBox dinámico */}
               <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="nombre_propietario">Nombre Completo del Dueño *</Label>
-                <Input
-                  id="nombre_propietario"
+                <Label htmlFor="nombre_propietario">Nombre del Propietario *</Label>
+                <Select
                   value={formData.nombre_propietario}
-                  onChange={(e) => handleInputChange("nombre_propietario", e.target.value)}
-                  placeholder="Nombre completo del propietario"
-                  required
-                />
+                  onValueChange={(value) => handleInputChange("nombre_propietario", value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona un propietario" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {propietarios.map((nombre, idx) => (
+                      <SelectItem key={idx} value={nombre}>
+                        {nombre}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 

@@ -1,96 +1,83 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Edit, Trash2, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
 import { VehiclesRegistrationModal } from "@/components/vehicles-registration-modal"
-
-interface Vehicle {
-  id_vehiculo: number
-  marca: string
-  modelo: string
-  placa: string
-  color: string
-  estado: "Activo" | "Eliminado"
-  id_propietario?: number
-  id_residente?: number
-  id_visitante?: number
-  propietario_nombre?: string
-  residente_nombre?: string
-  visitante_nombre?: string
-}
+import {
+  getAllVehiculos,
+  registrarVehiculo,
+  actualizarVehiculo,
+  eliminarVehiculo,
+  Vehiculo,
+} from "@/lib/Services/vehiculos.service"
 
 export function VehiclesTable() {
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null)
-  const [vehicles, setVehicles] = useState<Vehicle[]>([
-    {
-      id_vehiculo: 1,
-      marca: "Toyota",
-      modelo: "Corolla",
-      placa: "ABC-123",
-      color: "Blanco",
-      estado: "Activo",
-      id_propietario: 1,
-      propietario_nombre: "Juan Pérez",
-    },
-    {
-      id_vehiculo: 2,
-      marca: "Honda",
-      modelo: "Civic",
-      placa: "DEF-456",
-      color: "Negro",
-      estado: "Activo",
-      id_residente: 2,
-      residente_nombre: "María García",
-    },
-    {
-      id_vehiculo: 3,
-      marca: "Chevrolet",
-      modelo: "Spark",
-      placa: "GHI-789",
-      color: "Rojo",
-      estado: "Activo",
-      id_visitante: 1,
-      visitante_nombre: "Carlos López",
-    },
-  ])
+  const [editingVehicle, setEditingVehicle] = useState<Vehiculo | null>(null)
+  const [vehicles, setVehicles] = useState<Vehiculo[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  const handleAddVehicle = (vehicleData: any) => {
-    const newVehicle: Vehicle = {
-      id_vehiculo: vehicles.length + 1,
-      ...vehicleData,
+  // 🔁 Cargar lista desde API
+  useEffect(() => {
+    const fetchVehiculos = async () => {
+      try {
+        const data = await getAllVehiculos()
+        setVehicles(data)
+      } catch (err: any) {
+        setError("Error al cargar vehículos")
+        console.error(err)
+      } finally {
+        setLoading(false)
+      }
     }
-    setVehicles([...vehicles, newVehicle])
-    setIsModalOpen(false)
-  }
 
-  const handleEditVehicle = (vehicleData: any) => {
-    if (editingVehicle) {
-      const updatedVehicles = vehicles.map((vehicle) =>
-        vehicle.id_vehiculo === editingVehicle.id_vehiculo
-          ? {
-              ...vehicle,
-              ...vehicleData,
-            }
-          : vehicle,
-      )
-      setVehicles(updatedVehicles)
-      setEditingVehicle(null)
+    fetchVehiculos()
+  }, [])
+
+  // 📥 Registrar
+  const handleAddVehicle = async (vehicleData: Omit<Vehiculo, "id_vehiculo">) => {
+    try {
+      await registrarVehiculo(vehicleData)
+      const updated = await getAllVehiculos()
+      setVehicles(updated)
       setIsModalOpen(false)
+    } catch (err: any) {
+      alert("Error al registrar vehículo: " + err.message)
     }
   }
 
-  const handleDeleteVehicle = (id: number) => {
+  // ✏️ Editar
+  const handleEditVehicle = async (vehicleData: Omit<Vehiculo, "id_vehiculo">) => {
+    if (editingVehicle?.id_vehiculo) {
+      try {
+        await actualizarVehiculo(editingVehicle.id_vehiculo, vehicleData)
+        const updated = await getAllVehiculos()
+        setVehicles(updated)
+        setEditingVehicle(null)
+        setIsModalOpen(false)
+      } catch (err: any) {
+        alert("Error al actualizar vehículo: " + err.message)
+      }
+    }
+  }
+
+  // 🗑️ Eliminar
+  const handleDeleteVehicle = async (id: number) => {
     if (confirm("¿Estás seguro de que deseas eliminar este vehículo?")) {
-      setVehicles(vehicles.filter((vehicle) => vehicle.id_vehiculo !== id))
+      try {
+        await eliminarVehiculo(id)
+        setVehicles(vehicles.filter((v) => v.id_vehiculo !== id))
+      } catch (err: any) {
+        alert("Error al eliminar vehículo: " + err.message)
+      }
     }
   }
 
-  const openEditModal = (vehicle: Vehicle) => {
+  const openEditModal = (vehicle: Vehiculo) => {
     setEditingVehicle(vehicle)
     setIsModalOpen(true)
   }
@@ -98,32 +85,6 @@ export function VehiclesTable() {
   const closeModal = () => {
     setIsModalOpen(false)
     setEditingVehicle(null)
-  }
-
-  const getStatusBadge = (estado: string) => {
-    switch (estado) {
-      case "Activo":
-        return (
-          <Badge variant="default" className="bg-green-100 text-green-800 hover:bg-green-100">
-            Activo
-          </Badge>
-        )
-      case "Eliminado":
-        return <Badge variant="destructive">Eliminado</Badge>
-      default:
-        return <Badge variant="secondary">{estado}</Badge>
-    }
-  }
-
-  const getOwnerInfo = (vehicle: Vehicle) => {
-    if (vehicle.id_propietario) {
-      return `Propietario: ${vehicle.propietario_nombre}`
-    } else if (vehicle.id_residente) {
-      return `Residente: ${vehicle.residente_nombre}`
-    } else if (vehicle.id_visitante) {
-      return `Visitante: ${vehicle.visitante_nombre}`
-    }
-    return "Sin asignar"
   }
 
   return (
@@ -142,50 +103,54 @@ export function VehiclesTable() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>ID</TableHead>
-                  <TableHead>Marca</TableHead>
-                  <TableHead>Modelo</TableHead>
-                  <TableHead>Placa</TableHead>
-                  <TableHead>Color</TableHead>
-                  <TableHead>Estado</TableHead>
-                  <TableHead>Propietario</TableHead>
-                  <TableHead>Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {vehicles.map((vehicle) => (
-                  <TableRow key={vehicle.id_vehiculo}>
-                    <TableCell className="font-medium">{vehicle.id_vehiculo}</TableCell>
-                    <TableCell>{vehicle.marca}</TableCell>
-                    <TableCell>{vehicle.modelo}</TableCell>
-                    <TableCell className="font-mono">{vehicle.placa}</TableCell>
-                    <TableCell>{vehicle.color}</TableCell>
-                    <TableCell>{getStatusBadge(vehicle.estado)}</TableCell>
-                    <TableCell className="text-sm">{getOwnerInfo(vehicle)}</TableCell>
-                    <TableCell>
-                      <div className="flex space-x-2">
-                        <Button variant="outline" size="sm" onClick={() => openEditModal(vehicle)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDeleteVehicle(vehicle.id_vehiculo)}
-                          className="text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
+          {loading ? (
+            <p>Cargando vehículos...</p>
+          ) : error ? (
+            <p className="text-red-500">{error}</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>ID</TableHead>
+                    <TableHead>Placa</TableHead>
+                    <TableHead>Marca</TableHead>
+                    <TableHead>Modelo</TableHead>
+                    <TableHead>Color</TableHead>
+                    <TableHead>Propietario</TableHead>
+                    <TableHead>Acciones</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                </TableHeader>
+                <TableBody>
+                  {vehicles.map((vehicle) => (
+                    <TableRow key={vehicle.id_vehiculo}>
+                      <TableCell>{vehicle.id_vehiculo}</TableCell>
+                      <TableCell className="font-mono">{vehicle.placa}</TableCell>
+                      <TableCell>{vehicle.marca}</TableCell>
+                      <TableCell>{vehicle.modelo}</TableCell>
+                      <TableCell>{vehicle.color}</TableCell>
+                      <TableCell>{vehicle.propietario_vehiculo}</TableCell>
+                      <TableCell>
+                        <div className="flex space-x-2">
+                          <Button variant="outline" size="sm" onClick={() => openEditModal(vehicle)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDeleteVehicle(vehicle.id_vehiculo!)}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
 

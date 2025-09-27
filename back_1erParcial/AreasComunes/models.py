@@ -14,8 +14,6 @@ class AreaComun(models.Model):
     costo_hora = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     requiere_reserva = models.BooleanField(default=True)
     tiempo_max_reserva = models.IntegerField(default=2)
-    fecha_creacion = models.DateTimeField(default=timezone.now)
-    fecha_actualizacion = models.DateTimeField(auto_now=True)
     
     class Meta:
         db_table = 'areas_comunes'

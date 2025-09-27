@@ -1,99 +1,85 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Edit, Trash2, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { VisitorsRegistrationModal } from "@/components/visitors-registration-modal"
-
-interface Visitor {
-  id_visitante: number
-  nombre_completo: string
-  ci: string
-  telefono: string
-  correo: string
-  fecha_agregacion: string
-  fecha_visita: string
-  estado: "Activo" | "Eliminado"
-  id_propietario?: number
-  id_residente?: number
-  propietario_nombre?: string
-  residente_nombre?: string
-}
-
-const mockVisitors: Visitor[] = [
-  {
-    id_visitante: 1,
-    nombre_completo: "Carlos Mendoza",
-    ci: "12345678",
-    telefono: "3001234567",
-    correo: "carlos.mendoza@email.com",
-    fecha_agregacion: "2024-01-15",
-    fecha_visita: "2024-01-20",
-    estado: "Activo",
-    id_propietario: 1,
-    propietario_nombre: "Ana García",
-  },
-  {
-    id_visitante: 2,
-    nombre_completo: "María López",
-    ci: "87654321",
-    telefono: "3009876543",
-    correo: "maria.lopez@email.com",
-    fecha_agregacion: "2024-01-16",
-    fecha_visita: "2024-01-22",
-    estado: "Activo",
-    id_residente: 2,
-    residente_nombre: "Pedro Martínez",
-  },
-  {
-    id_visitante: 3,
-    nombre_completo: "Juan Pérez",
-    ci: "11223344",
-    telefono: "3005566778",
-    correo: "juan.perez@email.com",
-    fecha_agregacion: "2024-01-10",
-    fecha_visita: "2024-01-18",
-    estado: "Eliminado",
-    id_propietario: 3,
-    propietario_nombre: "Laura Rodríguez",
-  },
-]
+import {
+  getAllVisitantes,
+  registrarVisitante,
+  actualizarVisitante,
+  eliminarVisitante,
+  Visitor,
+  VisitorRegister
+} from "@/lib/Services/visitantes.service"
 
 export function VisitorsTable() {
-  const [visitors, setVisitors] = useState<Visitor[]>(mockVisitors)
+  const [visitors, setVisitors] = useState<Visitor[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingVisitor, setEditingVisitor] = useState<Visitor | null>(null)
-
-  const handleAddVisitor = (visitorData: any) => {
-    const newVisitor: Visitor = {
-      id_visitante: Math.max(...visitors.map((v) => v.id_visitante)) + 1,
-      ...visitorData,
+  useEffect(() => {
+    const fetchVisitors = async () => {
+      try {
+        const data = await getAllVisitantes()
+        setVisitors(data)
+      } catch (err: any) {
+        setError("Error al cargar visitantes: " + err.message)
+      } finally {
+        setLoading(false)
+      }
     }
-    setVisitors([...visitors, newVisitor])
-    setIsModalOpen(false)
+
+    fetchVisitors()
+  }, [])
+
+  const handleAddVisitor = async (visitorData: VisitorRegister) => {
+    try {
+      await registrarVisitante(visitorData)
+      const updated = await getAllVisitantes()
+      setVisitors(updated)
+      setIsModalOpen(false)
+    } catch (error: any) {
+      alert("Error al registrar visitante: " + error.message)
+    }
   }
+
 
   const handleEditVisitor = (visitor: Visitor) => {
     setEditingVisitor(visitor)
     setIsModalOpen(true)
   }
 
-  const handleUpdateVisitor = (visitorData: any) => {
-    if (editingVisitor) {
-      setVisitors(visitors.map((v) => (v.id_visitante === editingVisitor.id_visitante ? { ...v, ...visitorData } : v)))
-      setEditingVisitor(null)
+  const handleUpdateVisitor = async (visitorData: VisitorRegister) => {
+    if (!editingVisitor) return
+
+    try {
+      await actualizarVisitante(editingVisitor.id_visitante, visitorData)
+      const updated = await getAllVisitantes()
+      setVisitors(updated)
       setIsModalOpen(false)
+      setEditingVisitor(null)
+    } catch (error: any) {
+      alert("Error al actualizar visitante: " + error.message)
     }
   }
 
-  const handleDeleteVisitor = (id: number) => {
-    if (confirm("¿Estás seguro de que deseas eliminar este visitante?")) {
-      setVisitors(visitors.filter((v) => v.id_visitante !== id))
+  const handleDeleteVisitor = async (id: number) => {
+    if (confirm("¿Deseas eliminar este visitante?")) {
+      try {
+        await eliminarVisitante(id)
+        const updated = await getAllVisitantes()
+        setVisitors(updated)
+      } catch (error: any) {
+        alert("Error al eliminar visitante: " + error.message)
+      }
     }
   }
+
 
   const handleCloseModal = () => {
     setIsModalOpen(false)
@@ -139,9 +125,7 @@ export function VisitorsTable() {
                 <TableRow>
                   <TableHead>ID</TableHead>
                   <TableHead>Nombre Completo</TableHead>
-                  <TableHead>CI</TableHead>
                   <TableHead>Teléfono</TableHead>
-                  <TableHead>Correo</TableHead>
                   <TableHead>Fecha Agregación</TableHead>
                   <TableHead>Fecha Visita</TableHead>
                   <TableHead>Estado</TableHead>
@@ -154,24 +138,11 @@ export function VisitorsTable() {
                   <TableRow key={visitor.id_visitante}>
                     <TableCell className="font-medium">{visitor.id_visitante}</TableCell>
                     <TableCell>{visitor.nombre_completo}</TableCell>
-                    <TableCell>{visitor.ci}</TableCell>
                     <TableCell>{visitor.telefono}</TableCell>
-                    <TableCell>{visitor.correo}</TableCell>
                     <TableCell>{visitor.fecha_agregacion}</TableCell>
                     <TableCell>{visitor.fecha_visita}</TableCell>
                     <TableCell>{getStatusBadge(visitor.estado)}</TableCell>
-                    <TableCell>
-                      {visitor.propietario_nombre && (
-                        <div className="text-sm">
-                          <span className="font-medium">Propietario:</span> {visitor.propietario_nombre}
-                        </div>
-                      )}
-                      {visitor.residente_nombre && (
-                        <div className="text-sm">
-                          <span className="font-medium">Residente:</span> {visitor.residente_nombre}
-                        </div>
-                      )}
-                    </TableCell>
+                    <TableCell>{visitor.nombre_anfitrion}</TableCell>
                     <TableCell>
                       <div className="flex space-x-2">
                         <Button variant="outline" size="sm" onClick={() => handleEditVisitor(visitor)}>

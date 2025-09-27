@@ -1,6 +1,6 @@
 "use client"
 
-import { Users, Building, LogOut, UserCog, UserCheck, Crown, Heart, MapPin, UserPlus, Car } from "lucide-react"
+import { Users, Building, LogOut, UserCog, UserCheck, Crown, Heart, MapPin, UserPlus, Car, Scale } from "lucide-react"
 import Image from "next/image"
 import { logout } from "@/lib/Services/usuarios.service"
 import {
@@ -73,6 +73,12 @@ const items = [
     icon: Car,
     key: "vehiculos",
   },
+  {
+    title: "Reglas",
+    url: "#",
+    icon: Scale,
+    key: "reglas",
+  }
 ]
 
 interface AppSidebarProps {

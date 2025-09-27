@@ -1,99 +1,82 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Edit, Trash2, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { PropertiesRegistrationModal } from "@/components/properties-registration-modal"
-
-interface Property {
-  id_propiedad: number
-  tipo_propiedad: string
-  numero: string
-  direccion: string
-  metros_cuadrados: number
-  estado: "Activo" | "Eliminado"
-  id_propietario: number
-  nombre_propietario: string
-}
+import {
+  getAllPropiedades,
+  registrarPropiedad,
+  actualizarPropiedad,
+  eliminarPropiedad,
+  Propiedad,
+  PropiedadRegister,
+} from "@/lib/Services/propiedades.service"
 
 export function PropertiesTable() {
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [editingProperty, setEditingProperty] = useState<Property | null>(null)
-  const [properties, setProperties] = useState<Property[]>([
-    {
-      id_propiedad: 1,
-      tipo_propiedad: "Apartamento",
-      numero: "101",
-      direccion: "Torre A - Piso 1",
-      metros_cuadrados: 85,
-      estado: "Activo",
-      id_propietario: 1,
-      nombre_propietario: "Juan Pérez",
-    },
-    {
-      id_propiedad: 2,
-      tipo_propiedad: "Apartamento",
-      numero: "102",
-      direccion: "Torre A - Piso 1",
-      metros_cuadrados: 92,
-      estado: "Activo",
-      id_propietario: 2,
-      nombre_propietario: "María García",
-    },
-    {
-      id_propiedad: 3,
-      tipo_propiedad: "Penthouse",
-      numero: "501",
-      direccion: "Torre B - Piso 5",
-      metros_cuadrados: 150,
-      estado: "Eliminado",
-      id_propietario: 3,
-      nombre_propietario: "Carlos López",
-    },
-  ])
+  const [editingProperty, setEditingProperty] = useState<Propiedad | null>(null)
+  const [properties, setProperties] = useState<Propiedad[]>([])
 
-  const handleAddProperty = (propertyData: any) => {
-    const newProperty: Property = {
-      id_propiedad: properties.length + 1,
-      ...propertyData,
-      id_propietario: properties.length + 1, // Simulated ID
+  // 📌 Cargar propiedades al montar
+  useEffect(() => {
+    fetchProperties()
+  }, [])
+
+  const fetchProperties = async () => {
+    try {
+      const data = await getAllPropiedades()
+      setProperties(data)
+    } catch (error) {
+      console.error("Error al cargar propiedades:", error)
     }
-    setProperties([...properties, newProperty])
-    setIsModalOpen(false)
   }
 
-  const handleEditProperty = (property: Property) => {
-    setEditingProperty(property)
-    setIsModalOpen(true)
-  }
-
-  const handleUpdateProperty = (propertyData: any) => {
-    if (editingProperty) {
-      setProperties(
-        properties.map((property) =>
-          property.id_propiedad === editingProperty.id_propiedad ? { ...property, ...propertyData } : property,
-        ),
-      )
-      setEditingProperty(null)
+  // ➕ Registrar
+  const handleAddProperty = async (propertyData: PropiedadRegister) => {
+    try {
+      await registrarPropiedad(propertyData)
+      await fetchProperties() // refrescar lista
       setIsModalOpen(false)
+    } catch (error) {
+      console.error("Error al registrar propiedad:", error)
     }
   }
 
-  const handleDeleteProperty = (id: number) => {
+  // ✏️ Editar
+  const handleUpdateProperty = async (propertyData: PropiedadRegister) => {
+    if (editingProperty) {
+      try {
+        await actualizarPropiedad(editingProperty.id_propiedad, propertyData)
+        await fetchProperties()
+        setEditingProperty(null)
+        setIsModalOpen(false)
+      } catch (error) {
+        console.error("Error al actualizar propiedad:", error)
+      }
+    }
+  }
+
+  // 🗑️ Eliminar
+  const handleDeleteProperty = async (id: number) => {
     if (confirm("¿Estás seguro de que deseas eliminar esta propiedad?")) {
-      setProperties(properties.filter((property) => property.id_propiedad !== id))
+      try {
+        await eliminarPropiedad(id)
+        await fetchProperties()
+      } catch (error) {
+        console.error("Error al eliminar propiedad:", error)
+      }
     }
   }
 
-  const getStatusBadge = (status: Property["estado"]) => {
+  const getStatusBadge = (status: Propiedad["estado"]) => {
     const variants = {
       Activo: "default",
       Eliminado: "destructive",
     } as const
-
     return <Badge variant={variants[status]}>{status}</Badge>
   }
 
@@ -122,40 +105,37 @@ export function PropertiesTable() {
                   <TableHead>m²</TableHead>
                   <TableHead>Estado</TableHead>
                   <TableHead>ID Propietario</TableHead>
-                  <TableHead>Propietario</TableHead>
-                  <TableHead>Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {properties.map((property) => (
                   <TableRow key={property.id_propiedad}>
-                    <TableCell className="font-medium">{property.id_propiedad}</TableCell>
+                    <TableCell>{property.id_propiedad}</TableCell>
                     <TableCell>{property.tipo_propiedad}</TableCell>
-                    <TableCell className="font-semibold">{property.numero}</TableCell>
+                    <TableCell>{property.numero}</TableCell>
                     <TableCell>{property.direccion}</TableCell>
                     <TableCell>{property.metros_cuadrados} m²</TableCell>
-                    <TableCell>{getStatusBadge(property.estado)}</TableCell>
+                    <TableCell>{getStatusBadge(property.estado as "Activo" | "Eliminado")}</TableCell>
                     <TableCell>{property.id_propietario}</TableCell>
-                    <TableCell>{property.nombre_propietario}</TableCell>
                     <TableCell>
                       <div className="flex space-x-2">
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleEditProperty(property)}
-                          className="gap-1"
+                          onClick={() => {
+                            setEditingProperty(property)
+                            setIsModalOpen(true)
+                          }}
                         >
-                          <Edit className="h-3 w-3" />
-                          Editar
+                          <Edit className="h-4 w-4" /> Editar
                         </Button>
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => handleDeleteProperty(property.id_propiedad)}
-                          className="gap-1 text-destructive hover:text-destructive"
+                          className="text-destructive hover:text-destructive"
                         >
-                          <Trash2 className="h-3 w-3" />
-                          Eliminar
+                          <Trash2 className="h-4 w-4" /> Eliminar
                         </Button>
                       </div>
                     </TableCell>

@@ -238,3 +238,13 @@ def listar_nombre_propietarios(request):
         return Response({'nombres_propietarios': nombres}, status=status.HTTP_200_OK)
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+def listar_nombres_anfitriones(request):
+    propietarios = list(Propietario.objects.values('nombre_completo'))
+    residentes = list(Residente.objects.values('nombre_completo'))
+
+    # Unir ambas listas en una sola
+    anfitriones = propietarios + residentes
+
+    return Response(anfitriones)
