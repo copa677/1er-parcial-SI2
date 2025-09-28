@@ -1,25 +1,28 @@
-# Fase de construcción
-FROM node:22-alpine AS builder
+# frontend/Dockerfile
+
+# Etapa 1: Dependencias
+FROM node:20-alpine AS deps
 WORKDIR /app
-COPY package.json package-lock.json ./
-RUN npm ci
+COPY package.json package-lock.json* ./
+RUN npm install --frozen-lockfile
+
+# Etapa 2: Build
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-RUN npm run build -- --configuration=production
+RUN npm run build
 
-# Fase de producción
-FROM node:22-alpine
+# Etapa 3: Producción
+FROM node:20-alpine AS runner
 WORKDIR /app
-
-# Instala http-server para servir la app
-RUN npm install -g http-server
-
-# CORRECCIÓN: Copia toda la carpeta dist (sin /browser)
-COPY --from=builder /app/dist/my-proyecto-app ./dist
-
-# Variables de entorno
 ENV NODE_ENV=production
-ENV PORT=4000
-EXPOSE 4000
+ENV PORT=3000
 
-# Comando para servir la app (corregido)
-CMD ["http-server", "dist", "-p", "4000", "--proxy", "http://0.0.0.0:4000?"]
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/node_modules ./node_modules
+
+EXPOSE 3000
+CMD ["npm", "start"]

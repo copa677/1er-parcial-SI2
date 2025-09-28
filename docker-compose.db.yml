@@ -8,13 +8,13 @@ services:
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=password
-      - POSTGRES_DB=WF
+      - POSTGRES_DB=p1
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d WF"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d p1"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -30,7 +30,7 @@ services:
       PGADMIN_DEFAULT_PASSWORD: admin
     volumes:
       - pgadmin_data:/var/lib/pgadmin
-      - ./BACK/rp.sql:/tmp/rp.sql
+      - ./back_1erParcial/rp.sql:/tmp/rp.sql
     ports:
       - "5050:80"
     user: "5050:5050"

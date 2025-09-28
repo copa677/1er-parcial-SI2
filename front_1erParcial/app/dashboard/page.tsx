@@ -15,6 +15,5 @@ export default function DashboardPage() {
     }
   }, [])
 
-  const user = getUsuario()
-
-    return <Dashboard />}
+  return <Dashboard />
+}
