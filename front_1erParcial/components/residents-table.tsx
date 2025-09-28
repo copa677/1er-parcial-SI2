@@ -7,8 +7,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { ResidentsRegistrationModal } from "@/components/residents-registration-modal"
-import { getAllResidentes, registrarResidente } from "@/lib/Services/usuarios.service"
+import { getAllResidentes, registrarResidente, actualizarResidente, getUsuario } from "@/lib/Services/usuarios.service"
 import { ResidentsEditModal } from "@/components/residents-edit"
+import { registrarBitacora, getUserIP, getUserDateTime } from "@/lib/Services/bitacora.service"
 
 export interface Resident {
   id_residente: number
@@ -48,12 +49,28 @@ export function ResidentsTable() {
 
   const handleAddResident = async (residentData: any) => {
     try {
+      // 🔹 1. Registrar residente en backend
       const response = await registrarResidente(residentData)
       console.log("✅ Residente registrado:", response)
 
-      // Refrescar lista real
+      // 🔹 2. Registrar en bitácora
+      const usuario = getUsuario()
+      const ip = await getUserIP()
+      const fecha_hora = getUserDateTime()
+
+      await registrarBitacora({
+        username: usuario?.username || "desconocido",
+        ip,
+        fecha_hora,
+        accion: "Registrar",
+        descripcion: `Se registró un nuevo residente: ${residentData.nombre_completo}`,
+      })
+
+      // 🔹 3. Refrescar lista
       const updatedResidents = await getAllResidentes()
       setResidents(updatedResidents)
+
+      // 🔹 4. Cerrar modal
       setIsModalOpen(false)
     } catch (error: any) {
       console.error("❌ Error al registrar residente:", error.message)
@@ -61,14 +78,35 @@ export function ResidentsTable() {
     }
   }
 
-  const handleUpdateResident = (updatedResident: Resident) => {
-    setResidents((prev) =>
-      prev.map((r) =>
-        r.id_residente === updatedResident.id_residente ? updatedResident : r
-      )
-    )
-    setIsEditModalOpen(false)
-    setSelectedResident(null)
+  const handleUpdateResident = async (updatedResident: Resident) => {
+    try {
+      // 🔹 1. Llamar API para actualizar en backend
+      await actualizarResidente(updatedResident.id_residente, updatedResident)
+
+      // 🔹 2. Registrar en bitácora
+      const usuario = getUsuario()
+      const ip = await getUserIP()
+      const fecha_hora = getUserDateTime()
+
+      await registrarBitacora({
+        username: usuario?.username || "desconocido",
+        ip,
+        fecha_hora,
+        accion: "Actualizar",
+        descripcion: `Se actualizó residente ID ${updatedResident.id_residente}`,
+      })
+
+      // 🔹 3. Refrescar lista
+      const updatedList = await getAllResidentes()
+      setResidents(updatedList)
+
+      // 🔹 4. Cerrar modal
+      setIsEditModalOpen(false)
+      setSelectedResident(null)
+    } catch (error: any) {
+      console.error("❌ Error al actualizar residente:", error.message)
+      alert("Error al actualizar residente: " + error.message)
+    }
   }
 
 

@@ -16,6 +16,10 @@ import {
   Mascota,
 } from "@/lib/Services/mascotas.service"
 
+// 📌 Servicios de bitácora y usuario
+import { registrarBitacora, getUserIP, getUserDateTime } from "@/lib/Services/bitacora.service"
+import { getUsuario } from "@/lib/Services/usuarios.service"
+
 export function PetsTable() {
   const [pets, setPets] = useState<Mascota[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -39,34 +43,77 @@ export function PetsTable() {
     }
   }
 
+  // ➕ Registrar mascota + Bitácora
   const handleAddPet = async (petData: Omit<Mascota, "id_mascota">) => {
     try {
       await registrarMascota(petData)
-      fetchPets()
+      await fetchPets()
       setIsModalOpen(false)
+
+      const user = getUsuario()
+      const ip = await getUserIP()
+      const fecha_hora = getUserDateTime()
+      if (user) {
+        await registrarBitacora({
+          username: user.username,
+          ip,
+          fecha_hora,
+          accion: "Registrar Mascota",
+          descripcion: `Se registró la mascota "${petData.nombre}" (${petData.especie}, ${petData.raza}) del dueño ${petData.dueno}`,
+        })
+      }
     } catch (error) {
       console.error("Error al registrar mascota:", error)
     }
   }
 
+  // ✏️ Editar mascota + Bitácora
   const handleUpdatePet = async (petData: Omit<Mascota, "id_mascota">) => {
     try {
       if (editingPet) {
         await actualizarMascota(editingPet.id_mascota, petData)
-        fetchPets()
+        await fetchPets()
         setEditingPet(null)
         setIsModalOpen(false)
+
+        const user = getUsuario()
+        const ip = await getUserIP()
+        const fecha_hora = getUserDateTime()
+        if (user) {
+          await registrarBitacora({
+            username: user.username,
+            ip,
+            fecha_hora,
+            accion: "Editar Mascota",
+            descripcion: `Se actualizó la mascota #${editingPet.id_mascota}: ahora nombre "${petData.nombre}", especie ${petData.especie}, raza ${petData.raza}`,
+          })
+        }
       }
     } catch (error) {
       console.error("Error al actualizar mascota:", error)
     }
   }
 
+  // 🗑️ Eliminar mascota + Bitácora
   const handleDeletePet = async (id: number) => {
     if (confirm("¿Estás seguro de que deseas eliminar esta mascota?")) {
       try {
+        const petToDelete = pets.find((p) => p.id_mascota === id)
         await eliminarMascota(id)
-        fetchPets()
+        await fetchPets()
+
+        const user = getUsuario()
+        const ip = await getUserIP()
+        const fecha_hora = getUserDateTime()
+        if (user && petToDelete) {
+          await registrarBitacora({
+            username: user.username,
+            ip,
+            fecha_hora,
+            accion: "Eliminar Mascota",
+            descripcion: `Se eliminó la mascota #${petToDelete.id_mascota}: "${petToDelete.nombre}" (${petToDelete.especie}, ${petToDelete.raza})`,
+          })
+        }
       } catch (error) {
         console.error("Error al eliminar mascota:", error)
       }
@@ -117,7 +164,11 @@ export function PetsTable() {
                     <TableCell>{pet.dueno}</TableCell>
                     <TableCell>
                       <div className="flex space-x-2">
-                        <Button variant="outline" size="sm" onClick={() => { setEditingPet(pet); setIsModalOpen(true) }}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => { setEditingPet(pet); setIsModalOpen(true) }}
+                        >
                           <Edit className="h-4 w-4" />
                         </Button>
                         <Button

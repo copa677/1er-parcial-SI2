@@ -14,6 +14,10 @@ import {
   Regla,
 } from "../lib/Services/reglas.service"
 
+// 📌 Importar servicios de Bitácora y Usuario
+import { registrarBitacora, getUserIP, getUserDateTime } from "@/lib/Services/bitacora.service"
+import { getUsuario } from "@/lib/Services/usuarios.service"
+
 export function ReglasTable() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingRegla, setEditingRegla] = useState<Regla | null>(null)
@@ -38,7 +42,7 @@ export function ReglasTable() {
     fetchReglas()
   }, [])
 
-  // ➕ Registrar nueva regla
+  // ➕ Registrar nueva regla + Bitácora
   const handleAddRegla = async (data: any) => {
     try {
       await registrarRegla({
@@ -47,12 +51,26 @@ export function ReglasTable() {
       })
       await fetchReglas()
       setIsModalOpen(false)
+
+      // 🔹 Guardar en Bitácora
+      const user = getUsuario()
+      const ip = await getUserIP()
+      const fecha_hora = getUserDateTime()
+      if (user) {
+        await registrarBitacora({
+          username: user.username,
+          ip,
+          fecha_hora,
+          accion: "Registrar Regla",
+          descripcion: `Se registró la regla: "${data.descripcion}" con monto Bs. ${data.monto}`,
+        })
+      }
     } catch (err: any) {
       alert(err.message)
     }
   }
 
-  // ✏️ Editar regla
+  // ✏️ Editar regla + Bitácora
   const handleEditRegla = async (data: any) => {
     if (!editingRegla?.id_regla) return
     try {
@@ -63,17 +81,47 @@ export function ReglasTable() {
       await fetchReglas()
       setEditingRegla(null)
       setIsModalOpen(false)
+
+      // 🔹 Guardar en Bitácora
+      const user = getUsuario()
+      const ip = await getUserIP()
+      const fecha_hora = getUserDateTime()
+      if (user) {
+        await registrarBitacora({
+          username: user.username,
+          ip,
+          fecha_hora,
+          accion: "Editar Regla",
+          descripcion: `Se actualizó la regla #${editingRegla.id_regla}: "${data.descripcion}" con monto Bs. ${data.monto}`,
+        })
+      }
     } catch (err: any) {
       alert(err.message)
     }
   }
 
-  // ❌ Eliminar regla
+  // ❌ Eliminar regla + Bitácora
   const handleDeleteRegla = async (id: number) => {
     if (confirm("¿Estás seguro de que deseas eliminar esta regla?")) {
       try {
+        const reglaToDelete = reglas.find((r) => r.id_regla === id)
+
         await eliminarRegla(id)
         await fetchReglas()
+
+        // 🔹 Guardar en Bitácora
+        const user = getUsuario()
+        const ip = await getUserIP()
+        const fecha_hora = getUserDateTime()
+        if (user && reglaToDelete) {
+          await registrarBitacora({
+            username: user.username,
+            ip,
+            fecha_hora,
+            accion: "Eliminar Regla",
+            descripcion: `Se eliminó la regla #${reglaToDelete.id_regla}: "${reglaToDelete.descripcion}" con monto Bs. ${reglaToDelete.monto}`,
+          })
+        }
       } catch (err: any) {
         alert(err.message)
       }

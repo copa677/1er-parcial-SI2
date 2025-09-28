@@ -15,6 +15,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import Image from "next/image"
+import { registrarBitacora, getUserIP, getUserDateTime } from "@/lib/Services/bitacora.service"
 
 
 interface LoginFormProps {
@@ -40,7 +41,17 @@ export function LoginForm({ onLogin }: LoginFormProps) {
     try {
       const user = await login(username, password)
       console.log("Login correcto:", user.username)
+      // ✅ Guardar en la bitácora
+      const ip = await getUserIP()
+      const fecha_hora = getUserDateTime()
+      await registrarBitacora({
+        username: user.username,
+        ip,
+        fecha_hora,
+        accion: "Inicio de sesión",
+        descripcion: "El usuario accedió al sistema desde el portal de login"
 
+      })
       setSuccess("Inicio de sesión exitoso 🎉 Redirigiendo...")
 
       setTimeout(() => {

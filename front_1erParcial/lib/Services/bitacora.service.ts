@@ -4,8 +4,10 @@ const API = process.env.NEXT_PUBLIC_API_URL + "/bitacora"
 
 export interface Bitacora {
   id_bitacora?: number
+  username: string
   ip: string
   fecha_hora: string
+  accion: string
   descripcion: string
 }
 
@@ -24,20 +26,18 @@ export async function registrarBitacora(data: Bitacora) {
 // 🌐 Obtener la IP pública del usuario
 export async function getUserIP(): Promise<string> {
   try {
-    // Usamos un servicio externo gratuito
     const res = await axios.get("https://api.ipify.org?format=json")
     return res.data.ip
   } catch (error) {
-    console.error("Error al obtener la IP del usuario:", error)
+    console.error("❌ Error al obtener la IP del usuario:", error)
     return "0.0.0.0"
   }
 }
 
-// ⏱️ Obtener la fecha y hora actual en ISO
+// ⏱️ Obtener la fecha y hora local del usuario según su zona horaria
 export function getUserDateTime(): string {
-  return new Date().toLocaleString()
-}
-
-function obtenerresultado(){
-
+  return new Date().toLocaleString("sv-SE", {
+    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    hour12: false,
+  })
 }

@@ -16,6 +16,10 @@ import {
   PropiedadRegister,
 } from "@/lib/Services/propiedades.service"
 
+// 📌 Importar servicios de Bitácora y Usuario
+import { registrarBitacora, getUserIP, getUserDateTime } from "@/lib/Services/bitacora.service"
+import { getUsuario } from "@/lib/Services/usuarios.service"
+
 export function PropertiesTable() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingProperty, setEditingProperty] = useState<Propiedad | null>(null)
@@ -35,18 +39,32 @@ export function PropertiesTable() {
     }
   }
 
-  // ➕ Registrar
+  // ➕ Registrar Propiedad + Bitácora
   const handleAddProperty = async (propertyData: PropiedadRegister) => {
     try {
       await registrarPropiedad(propertyData)
-      await fetchProperties() // refrescar lista
+      await fetchProperties()
       setIsModalOpen(false)
+
+      // 🔹 Guardar en bitácora
+      const user = getUsuario()
+      const ip = await getUserIP()
+      const fecha_hora = getUserDateTime()
+      if (user) {
+        await registrarBitacora({
+          username: user.username,
+          ip,
+          fecha_hora,
+          accion: "Registrar Propiedad",
+          descripcion: `Se registró la propiedad tipo "${propertyData.tipo_propiedad}" con número ${propertyData.numero} y propietario ${propertyData.nombre_propietario}`,
+        })
+      }
     } catch (error) {
       console.error("Error al registrar propiedad:", error)
     }
   }
 
-  // ✏️ Editar
+  // ✏️ Editar Propiedad + Bitácora
   const handleUpdateProperty = async (propertyData: PropiedadRegister) => {
     if (editingProperty) {
       try {
@@ -54,18 +72,48 @@ export function PropertiesTable() {
         await fetchProperties()
         setEditingProperty(null)
         setIsModalOpen(false)
+
+        // 🔹 Guardar en bitácora
+        const user = getUsuario()
+        const ip = await getUserIP()
+        const fecha_hora = getUserDateTime()
+        if (user) {
+          await registrarBitacora({
+            username: user.username,
+            ip,
+            fecha_hora,
+            accion: "Editar Propiedad",
+            descripcion: `Se actualizó la propiedad #${editingProperty.id_propiedad}: ahora tipo "${propertyData.tipo_propiedad}", número ${propertyData.numero}`,
+          })
+        }
       } catch (error) {
         console.error("Error al actualizar propiedad:", error)
       }
     }
   }
 
-  // 🗑️ Eliminar
+  // 🗑️ Eliminar Propiedad + Bitácora
   const handleDeleteProperty = async (id: number) => {
     if (confirm("¿Estás seguro de que deseas eliminar esta propiedad?")) {
       try {
+        const propiedadToDelete = properties.find((p) => p.id_propiedad === id)
+
         await eliminarPropiedad(id)
         await fetchProperties()
+
+        // 🔹 Guardar en bitácora
+        const user = getUsuario()
+        const ip = await getUserIP()
+        const fecha_hora = getUserDateTime()
+        if (user && propiedadToDelete) {
+          await registrarBitacora({
+            username: user.username,
+            ip,
+            fecha_hora,
+            accion: "Eliminar Propiedad",
+            descripcion: `Se eliminó la propiedad #${propiedadToDelete.id_propiedad}: tipo "${propiedadToDelete.tipo_propiedad}", número ${propiedadToDelete.numero}`,
+          })
+        }
       } catch (error) {
         console.error("Error al eliminar propiedad:", error)
       }
@@ -105,6 +153,7 @@ export function PropertiesTable() {
                   <TableHead>m²</TableHead>
                   <TableHead>Estado</TableHead>
                   <TableHead>ID Propietario</TableHead>
+                  <TableHead>Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

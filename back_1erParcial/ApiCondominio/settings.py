@@ -51,6 +51,8 @@ INSTALLED_APPS = [
     'Vehiculos',
     'Propiedades',
     'Bitacora',
+    'Avisos',
+    
 ]
 
 MIDDLEWARE = [

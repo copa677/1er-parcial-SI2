@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { CommonAreasRegistrationModal } from "@/components/common-areas-registration-modal"
 
-// 📌 Importamos el servicio
+// 📌 Servicios
 import {
   getAllAreasComunes,
   registrarAreaComun,
@@ -17,6 +17,9 @@ import {
   AreaComun,
   AreaComunRegister,
 } from "@/lib/Services/areasComunes.service"
+
+import { registrarBitacora, getUserIP, getUserDateTime } from "@/lib/Services/bitacora.service"
+import { getUsuario } from "@/lib/Services/usuarios.service"
 
 export function CommonAreasTable() {
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -41,6 +44,26 @@ export function CommonAreasTable() {
     }
   }
 
+  const logBitacora = async (accion: string, descripcion: string) => {
+    try {
+      const user = getUsuario()
+      const ip = await getUserIP()
+      const fecha_hora = getUserDateTime()
+
+      if (user) {
+        await registrarBitacora({
+          username: user.username,
+          ip,
+          fecha_hora,
+          accion,
+          descripcion,
+        })
+      }
+    } catch (error) {
+      console.error("Error registrando en bitácora:", error)
+    }
+  }
+
   const handleEdit = (area: AreaComun) => {
     setEditingArea(area)
     setIsModalOpen(true)
@@ -49,8 +72,16 @@ export function CommonAreasTable() {
   const handleDelete = async (id: number) => {
     if (confirm("¿Estás seguro de que deseas eliminar esta área común?")) {
       try {
+        const areaToDelete = commonAreas.find((a) => a.id_area === id)
         await eliminarAreaComun(id)
         await fetchAreas()
+
+        if (areaToDelete) {
+          await logBitacora(
+            "Eliminar Área Común",
+            `Se eliminó el área común "${areaToDelete.nombre}" (${areaToDelete.tipo_area}, capacidad ${areaToDelete.capacidad_maxima})`
+          )
+        }
       } catch (error) {
         console.error("Error eliminando área común:", error)
       }
@@ -62,9 +93,17 @@ export function CommonAreasTable() {
       if (editingArea) {
         // 📌 Editar
         await editarAreaComun(editingArea.id_area, data)
+        await logBitacora(
+          "Editar Área Común",
+          `Se editó el área común "${editingArea.nombre}" → nuevo nombre "${data.nombre}", tipo ${data.tipo_area}`
+        )
       } else {
         // 📌 Registrar
         await registrarAreaComun(data)
+        await logBitacora(
+          "Registrar Área Común",
+          `Se registró el área común "${data.nombre}" (tipo ${data.tipo_area}, capacidad ${data.capacidad_maxima})`
+        )
       }
       await fetchAreas()
       setIsModalOpen(false)

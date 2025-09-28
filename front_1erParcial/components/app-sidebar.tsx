@@ -1,8 +1,8 @@
 "use client"
 
-import { Users, Building, LogOut, UserCog, UserCheck, Crown, Heart, MapPin, UserPlus, Car, Scale } from "lucide-react"
+import { Users, Building, LogOut, UserCog, UserCheck, Crown, Heart, MapPin, UserPlus, Car, Scale, ScrollText, Bell } from "lucide-react"
 import Image from "next/image"
-import { logout } from "@/lib/Services/usuarios.service"
+import { logout, getUsuario } from "@/lib/Services/usuarios.service"
 import {
   Sidebar,
   SidebarContent,
@@ -18,67 +18,22 @@ import {
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
 
+// 🔹 Importamos las funciones de bitácora
+import { registrarBitacora, getUserIP, getUserDateTime } from "@/lib/Services/bitacora.service"
+
 const items = [
-  {
-    title: "Residentes",
-    url: "#",
-    icon: Users,
-    key: "residentes",
-  },
-  {
-    title: "Usuarios",
-    url: "#",
-    icon: UserCog,
-    key: "usuarios",
-  },
-  {
-    title: "Personal",
-    url: "#",
-    icon: UserCheck,
-    key: "personal",
-  },
-  {
-    title: "Propietarios",
-    url: "#",
-    icon: Crown,
-    key: "propietarios",
-  },
-  {
-    title: "Mascotas",
-    url: "#",
-    icon: Heart,
-    key: "mascotas",
-  },
-  {
-    title: "Areas Comunes",
-    url: "#",
-    icon: MapPin,
-    key: "areas-comunes",
-  },
-  {
-    title: "Propiedades",
-    url: "#",
-    icon: Building,
-    key: "propiedades",
-  },
-  {
-    title: "Visitantes",
-    url: "#",
-    icon: UserPlus,
-    key: "visitantes",
-  },
-  {
-    title: "Vehículos",
-    url: "#",
-    icon: Car,
-    key: "vehiculos",
-  },
-  {
-    title: "Reglas",
-    url: "#",
-    icon: Scale,
-    key: "reglas",
-  }
+  { title: "Residentes", url: "#", icon: Users, key: "residentes" },
+  { title: "Usuarios", url: "#", icon: UserCog, key: "usuarios" },
+  { title: "Personal", url: "#", icon: UserCheck, key: "personal" },
+  { title: "Propietarios", url: "#", icon: Crown, key: "propietarios" },
+  { title: "Mascotas", url: "#", icon: Heart, key: "mascotas" },
+  { title: "Areas Comunes", url: "#", icon: MapPin, key: "areas-comunes" },
+  { title: "Propiedades", url: "#", icon: Building, key: "propiedades" },
+  { title: "Visitantes", url: "#", icon: UserPlus, key: "visitantes" },
+  { title: "Vehículos", url: "#", icon: Car, key: "vehiculos" },
+  { title: "Reglas", url: "#", icon: Scale, key: "reglas" },
+  { title: "Bitacora", url: "#", icon: ScrollText, key: "bitacora" },
+  { title: "Avisos", url: "#", icon: Bell, key: "avisos" }
 ]
 
 interface AppSidebarProps {
@@ -88,9 +43,31 @@ interface AppSidebarProps {
 
 export function AppSidebar({ activeSection = "residentes", onSectionChange }: AppSidebarProps) {
   const router = useRouter()
-  const handleLogout = () => {
-    logout()
-    router.push("/") // Redirigir al login
+
+  const handleLogout = async () => {
+    try {
+      const user = getUsuario() // 👤 obtenemos usuario actual del token
+      const ip = await getUserIP()
+      const fecha_hora = getUserDateTime()
+
+      // 📝 Registramos en la bitácora
+      if (user) {
+        await registrarBitacora({
+          username: user.username,
+          ip,
+          fecha_hora,
+          accion: "Cierre de Sesión",
+          descripcion: "El usuario cerró sesión en el sistema"
+        })
+      }
+
+      logout() // 🔐 cerramos sesión
+      router.push("/") // Redirigir al login
+    } catch (error) {
+      console.error("❌ Error al registrar bitácora de logout:", error)
+      logout() // aunque falle la bitácora, cerrar sesión
+      router.push("/")
+    }
   }
 
   return (

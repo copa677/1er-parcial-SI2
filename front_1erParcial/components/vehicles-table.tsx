@@ -14,6 +14,10 @@ import {
   Vehiculo,
 } from "@/lib/Services/vehiculos.service"
 
+// 📌 Importar servicios de Bitácora y Usuario
+import { registrarBitacora, getUserIP, getUserDateTime } from "@/lib/Services/bitacora.service"
+import { getUsuario } from "@/lib/Services/usuarios.service"
+
 export function VehiclesTable() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingVehicle, setEditingVehicle] = useState<Vehiculo | null>(null)
@@ -38,19 +42,33 @@ export function VehiclesTable() {
     fetchVehiculos()
   }, [])
 
-  // 📥 Registrar
+  // 📥 Registrar vehículo + Bitácora
   const handleAddVehicle = async (vehicleData: Omit<Vehiculo, "id_vehiculo">) => {
     try {
       await registrarVehiculo(vehicleData)
       const updated = await getAllVehiculos()
       setVehicles(updated)
       setIsModalOpen(false)
+
+      // 🔹 Guardar en Bitácora
+      const user = getUsuario()
+      const ip = await getUserIP()
+      const fecha_hora = getUserDateTime()
+      if (user) {
+        await registrarBitacora({
+          username: user.username,
+          ip,
+          fecha_hora,
+          accion: "Registrar Vehículo",
+          descripcion: `Se registró el vehículo con placa ${vehicleData.placa} (${vehicleData.marca} ${vehicleData.modelo})`,
+        })
+      }
     } catch (err: any) {
       alert("Error al registrar vehículo: " + err.message)
     }
   }
 
-  // ✏️ Editar
+  // ✏️ Editar vehículo + Bitácora
   const handleEditVehicle = async (vehicleData: Omit<Vehiculo, "id_vehiculo">) => {
     if (editingVehicle?.id_vehiculo) {
       try {
@@ -59,18 +77,48 @@ export function VehiclesTable() {
         setVehicles(updated)
         setEditingVehicle(null)
         setIsModalOpen(false)
+
+        // 🔹 Guardar en Bitácora
+        const user = getUsuario()
+        const ip = await getUserIP()
+        const fecha_hora = getUserDateTime()
+        if (user) {
+          await registrarBitacora({
+            username: user.username,
+            ip,
+            fecha_hora,
+            accion: "Editar Vehículo",
+            descripcion: `Se actualizó el vehículo con placa ${vehicleData.placa} (${vehicleData.marca} ${vehicleData.modelo})`,
+          })
+        }
       } catch (err: any) {
         alert("Error al actualizar vehículo: " + err.message)
       }
     }
   }
 
-  // 🗑️ Eliminar
+  // 🗑️ Eliminar vehículo + Bitácora
   const handleDeleteVehicle = async (id: number) => {
     if (confirm("¿Estás seguro de que deseas eliminar este vehículo?")) {
       try {
+        const vehicleToDelete = vehicles.find((v) => v.id_vehiculo === id)
+
         await eliminarVehiculo(id)
         setVehicles(vehicles.filter((v) => v.id_vehiculo !== id))
+
+        // 🔹 Guardar en Bitácora
+        const user = getUsuario()
+        const ip = await getUserIP()
+        const fecha_hora = getUserDateTime()
+        if (user && vehicleToDelete) {
+          await registrarBitacora({
+            username: user.username,
+            ip,
+            fecha_hora,
+            accion: "Eliminar Vehículo",
+            descripcion: `Se eliminó el vehículo con placa ${vehicleToDelete.placa} (${vehicleToDelete.marca} ${vehicleToDelete.modelo})`,
+          })
+        }
       } catch (err: any) {
         alert("Error al eliminar vehículo: " + err.message)
       }

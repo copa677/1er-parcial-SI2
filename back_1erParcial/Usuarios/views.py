@@ -27,8 +27,34 @@ def login(request):
             return Response({'error': 'Usuario o password incorrecto'}, status=status.HTTP_404_NOT_FOUND)
 
         if user.check_password(password):
-            token = generate_jwt(user)
-            return Response({'token': token}, status=status.HTTP_200_OK)
+            if user.tipo_user == "Personal":
+                token = generate_jwt(user)
+                return Response({'token': token}, status=status.HTTP_200_OK)
+            else:
+                return Response({'error': 'Solo usuarios tipo Personal pueden iniciar sesión'}, status=status.HTTP_403_FORBIDDEN)
+        else:
+            return Response({'error': 'Usuario o password incorrecto'}, status=status.HTTP_400_BAD_REQUEST)
+
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['POST'])
+def login_residente_propietario(request):
+    serializer = LoginSerializer(data=request.data)
+    if serializer.is_valid():
+        username = serializer.validated_data['username']
+        password = serializer.validated_data['password']
+
+        try:
+            user = Usuario.objects.get(username=username)
+        except Usuario.DoesNotExist:
+            return Response({'error': 'Usuario o password incorrecto'}, status=status.HTTP_404_NOT_FOUND)
+
+        if user.check_password(password):
+            if user.tipo_user == "Residente" or user.tipo_user == "Propietario":
+                token = generate_jwt(user)
+                return Response({'token': token}, status=status.HTTP_200_OK)
+            else:
+                return Response({'error': 'Solo usuarios tipo Personal pueden iniciar sesión'}, status=status.HTTP_403_FORBIDDEN)
         else:
             return Response({'error': 'Usuario o password incorrecto'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -248,3 +274,70 @@ def listar_nombres_anfitriones(request):
     anfitriones = propietarios + residentes
 
     return Response(anfitriones)
+
+# 🔹 Actualizar Personal (solo tabla personal)
+@api_view(['PUT'])
+def actualizar_personal(request, id_personal):
+    try:
+        personal = Personal.objects.get(id_personal=id_personal)
+    except Personal.DoesNotExist:
+        return Response({"error": "Personal no encontrado"}, status=status.HTTP_404_NOT_FOUND)
+
+    serializer = PersonalPayloadSerializer(data=request.data, partial=True)
+    if serializer.is_valid():
+        for campo, valor in serializer.validated_data.items():
+            setattr(personal, campo, valor)
+        personal.save()
+        return Response({"mensaje": "Personal actualizado correctamente"}, status=status.HTTP_200_OK)
+
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# 🔹 Actualizar Propietario (solo tabla propietario)
+@api_view(['PUT'])
+def actualizar_propietario(request, id_propietario):
+    try:
+        propietario = Propietario.objects.get(id_propietario=id_propietario)
+    except Propietario.DoesNotExist:
+        return Response({"error": "Propietario no encontrado"}, status=status.HTTP_404_NOT_FOUND)
+
+    serializer = PropietarioPayloadSerializer(data=request.data, partial=True)
+    if serializer.is_valid():
+        for campo, valor in serializer.validated_data.items():
+            setattr(propietario, campo, valor)
+        propietario.save()
+        return Response({"mensaje": "Propietario actualizado correctamente"}, status=status.HTTP_200_OK)
+
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# 🔹 Actualizar Residente (solo tabla residente)
+@api_view(['PUT'])
+def actualizar_residente(request, id_residente):
+    try:
+        residente = Residente.objects.get(id_residente=id_residente)
+    except Residente.DoesNotExist:
+        return Response({"error": "Residente no encontrado"}, status=status.HTTP_404_NOT_FOUND)
+
+    serializer = ResidentePayloadSerializer(data=request.data, partial=True)
+    if serializer.is_valid():
+        residente_data = serializer.validated_data
+
+        # Si se manda un propietario por nombre, actualizar id_propietario
+        if "nombre_propietario" in residente_data:
+            from .models import Propietario
+            try:
+                propietario = Propietario.objects.get(nombre_completo=residente_data["nombre_propietario"])
+                residente.id_propietario = propietario.id_propietario
+            except Propietario.DoesNotExist:
+                return Response({"error": "Propietario no encontrado"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Actualizar otros campos
+        for campo, valor in residente_data.items():
+            if campo != "nombre_propietario":  # ya lo manejamos arriba
+                setattr(residente, campo, valor)
+
+        residente.save()
+        return Response({"mensaje": "Residente actualizado correctamente"}, status=status.HTTP_200_OK)
+
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

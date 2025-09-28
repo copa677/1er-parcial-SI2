@@ -14,6 +14,8 @@ import { PropertiesTable } from "@/components/properties-table"
 import { VisitorsTable } from "@/components/visitors-table"
 import { VehiclesTable } from "@/components/vehicles-table"
 import { ReglasTable } from "@/components/reglas-table"
+import { BitacoraTable } from "./bitacora-table"
+import { AvisosTable } from "./avisos-table"
 
 export function Dashboard() {
   const [activeSection, setActiveSection] = useState("residentes")
@@ -40,6 +42,10 @@ export function Dashboard() {
         return <VehiclesTable />
       case "reglas":
         return <ReglasTable />
+      case "bitacora":
+        return <BitacoraTable/>
+      case "avisos":
+        return <AvisosTable/>
       default:
         return <ResidentsTable />
     }
@@ -65,6 +71,11 @@ export function Dashboard() {
         return "Visitantes"
       case "vehiculos":
         return "Vehículos"
+      case "bitacora":
+        return "Bitacora"
+      case "avisos":
+        return "Avisos"
+
       default:
         return "Residentes"
     }

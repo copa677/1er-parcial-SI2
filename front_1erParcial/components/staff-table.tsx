@@ -10,8 +10,8 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { StaffRegistrationModal } from "@/components/staff-registration-modal"
 import { StaffEditModal } from "@/components/staff-editt"
-import { getAllPersonal, registrarPersonal } from "@/lib/Services/usuarios.service"
-
+import { getAllPersonal, registrarPersonal, actualizarPersonal, getUsuario } from "@/lib/Services/usuarios.service"
+import { registrarBitacora, getUserIP, getUserDateTime } from "@/lib/Services/bitacora.service"
 
 interface Staff {
   id_personal: number
@@ -69,38 +69,62 @@ export function StaffTable() {
     }
   }
 
-  const handleUpdateStaff = (updatedStaff: Staff) => {
-    setStaff((prev) =>
-      prev.map((person) =>
-        person.id_personal === updatedStaff.id_personal ? updatedStaff : person
-      )
-    )
-    setIsEditModalOpen(false)
-    setSelectedStaff(null)
+  const handleUpdateStaff = async (updatedStaff: Staff) => {
+    try {
+      // 🔹 1. Llamar API
+      await actualizarPersonal(updatedStaff.id_personal, updatedStaff)
+
+      // 🔹 2. Registrar en bitácora
+      const usuario = getUsuario()
+      const ip = await getUserIP()
+      const fecha_hora = getUserDateTime()
+
+      await registrarBitacora({
+        username: usuario?.username || "desconocido",
+        ip,
+        fecha_hora,
+        accion: "Actualizar",
+        descripcion: `Se actualizó personal ID ${updatedStaff.id_personal}`,
+      })
+
+      // 🔹 3. Refrescar lista
+      const updatedList = await getAllPersonal()
+      setStaff(updatedList)
+
+      setIsEditModalOpen(false)
+      setSelectedStaff(null)
+    } catch (error: any) {
+      console.error("❌ Error al actualizar personal:", error.message)
+      alert("Error al actualizar personal: " + error.message)
+    }
   }
 
 
   const handleAddStaff = async (newStaff: Omit<StaffRegister, "id_personal">) => {
     try {
       const payload = {
-        username: newStaff.username,
-        password: newStaff.password,
-        email: newStaff.email,
+        ...newStaff,
         tipo_user: "Personal",
-        nombre_completo: newStaff.nombre_completo,
-        telefono: newStaff.telefono,
-        direccion: newStaff.direccion,
-        fecha_nacimiento: newStaff.fecha_nacimiento,
-        rol: newStaff.rol,
       }
 
-      const response = await registrarPersonal(payload)
-      console.log("✅ Personal registrado:", response)
+      await registrarPersonal(payload)
 
-      // Volver a cargar lista
+      // 🔹 Registrar en bitácora
+      const usuario = getUsuario()
+      const ip = await getUserIP()
+      const fecha_hora = getUserDateTime()
+
+      await registrarBitacora({
+        username: usuario?.username || "desconocido",
+        ip,
+        fecha_hora,
+        accion: "Registrar",
+        descripcion: `Se registró nuevo personal: ${payload.nombre_completo}`,
+      })
+
+      // Refrescar lista
       const updatedList = await getAllPersonal()
       setStaff(updatedList)
-
       setIsModalOpen(false)
     } catch (error: any) {
       console.error("❌ Error al registrar personal:", error.message)

@@ -7,8 +7,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { OwnersRegistrationModal } from "@/components/owners-registration-modal"
-import { getAllPropietarios, registrarPropietario } from "@/lib/Services/usuarios.service"
+import { getAllPropietarios, registrarPropietario, actualizarPropietario, getUsuario } from "@/lib/Services/usuarios.service"
 import { OwnersEditModal } from "@/components/owners-edit"
+import { registrarBitacora, getUserIP, getUserDateTime } from "@/lib/Services/bitacora.service"
 
 interface Owner {
   id_propietario: number
@@ -47,14 +48,22 @@ export function OwnersTable() {
 
   const handleAddOwner = async (ownerData: any) => {
     try {
-      const payload = {
-        ...ownerData,
-        tipo_user: "Propietario", // obligatorio para el backend
-      }
+      const payload = { ...ownerData, tipo_user: "Propietario" }
+      await registrarPropietario(payload)
 
-      const response = await registrarPropietario(payload)
-      console.log("✅ Propietario registrado:", response)
+      // 🔹 Bitácora
+      const usuario = getUsuario()
+      const ip = await getUserIP()
+      const fecha_hora = getUserDateTime()
+      await registrarBitacora({
+        username: usuario?.username || "desconocido",
+        ip,
+        fecha_hora,
+        accion: "Registrar",
+        descripcion: `Se registró nuevo propietario: ${payload.nombre_completo}`,
+      })
 
+      // 🔹 Refrescar lista
       const nuevos = await getAllPropietarios()
       setOwners(nuevos)
       setIsModalOpen(false)
@@ -76,14 +85,33 @@ export function OwnersTable() {
     }
   }
 
-  const handleUpdateOwner = (updatedOwner: Owner) => {
-    setOwners((prev) =>
-      prev.map((owner) =>
-        owner.id_propietario === updatedOwner.id_propietario ? updatedOwner : owner,
-      ),
-    )
-    setIsEditModalOpen(false)
-    setSelectedOwner(null)
+  const handleUpdateOwner = async (updatedOwner: Owner) => {
+    try {
+      // 🔹 1. API update
+      await actualizarPropietario(updatedOwner.id_propietario, updatedOwner)
+
+      // 🔹 2. Bitácora
+      const usuario = getUsuario()
+      const ip = await getUserIP()
+      const fecha_hora = getUserDateTime()
+      await registrarBitacora({
+        username: usuario?.username || "desconocido",
+        ip,
+        fecha_hora,
+        accion: "Actualizar",
+        descripcion: `Se actualizó propietario ID ${updatedOwner.id_propietario}`,
+      })
+
+      // 🔹 3. Refrescar lista
+      const nuevos = await getAllPropietarios()
+      setOwners(nuevos)
+
+      setIsEditModalOpen(false)
+      setSelectedOwner(null)
+    } catch (error: any) {
+      console.error("❌ Error al actualizar propietario:", error.message)
+      alert("Error al actualizar propietario: " + error.message)
+    }
   }
 
 

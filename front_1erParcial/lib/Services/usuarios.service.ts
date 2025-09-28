@@ -203,3 +203,56 @@ export async function listarNombresAnfitriones(): Promise<{ nombre_completo: str
   return res.json()
 }
 
+// 📌 Actualizar Personal
+export async function actualizarPersonal(id_personal: number, data: any) {
+  const res = await fetch(`${API}/usuarios/actualizar_personal/${id_personal}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  })
+
+  if (!res.ok) {
+    const error = await res.json()
+    throw new Error(error.error || "Error al actualizar personal")
+  }
+
+  return res.json()
+}
+
+// 📌 Actualizar Propietario
+export async function actualizarPropietario(id_propietario: number, data: any) {
+  const res = await fetch(`${API}/usuarios/actualizar_propietario/${id_propietario}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  })
+
+  if (!res.ok) {
+    const error = await res.json()
+    throw new Error(error.error || "Error al actualizar propietario")
+  }
+
+  return res.json()
+}
+
+// 📌 Actualizar Residente
+export async function actualizarResidente(id_residente: number, data: any) {
+  const res = await fetch(`${API}/usuarios/actualizar_residente/${id_residente}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  })
+
+  if (!res.ok) {
+    const error = await res.json()
+    throw new Error(error.error || "Error al actualizar residente")
+  }
+
+  return res.json()
+}

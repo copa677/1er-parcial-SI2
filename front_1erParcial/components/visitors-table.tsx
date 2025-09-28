@@ -13,8 +13,12 @@ import {
   actualizarVisitante,
   eliminarVisitante,
   Visitor,
-  VisitorRegister
+  VisitorRegister,
 } from "@/lib/Services/visitantes.service"
+
+// 🔹 Importamos Bitácora y Usuario
+import { registrarBitacora, getUserIP, getUserDateTime } from "@/lib/Services/bitacora.service"
+import { getUsuario } from "@/lib/Services/usuarios.service"
 
 export function VisitorsTable() {
   const [visitors, setVisitors] = useState<Visitor[]>([])
@@ -22,6 +26,7 @@ export function VisitorsTable() {
   const [error, setError] = useState<string | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingVisitor, setEditingVisitor] = useState<Visitor | null>(null)
+
   useEffect(() => {
     const fetchVisitors = async () => {
       try {
@@ -37,18 +42,33 @@ export function VisitorsTable() {
     fetchVisitors()
   }, [])
 
+  // 📌 Agregar visitante + registrar en bitácora
   const handleAddVisitor = async (visitorData: VisitorRegister) => {
     try {
       await registrarVisitante(visitorData)
       const updated = await getAllVisitantes()
       setVisitors(updated)
       setIsModalOpen(false)
+
+      // 🔹 Bitácora
+      const user = getUsuario()
+      const ip = await getUserIP()
+      const fecha_hora = getUserDateTime()
+      if (user) {
+        await registrarBitacora({
+          username: user.username,
+          ip,
+          fecha_hora,
+          accion: "Registrar Visitante",
+          descripcion: `Se registró al visitante ${visitorData.nombre_completo}`,
+        })
+      }
     } catch (error: any) {
       alert("Error al registrar visitante: " + error.message)
     }
   }
 
-
+  // 📌 Editar visitante + registrar en bitácora
   const handleEditVisitor = (visitor: Visitor) => {
     setEditingVisitor(visitor)
     setIsModalOpen(true)
@@ -63,23 +83,53 @@ export function VisitorsTable() {
       setVisitors(updated)
       setIsModalOpen(false)
       setEditingVisitor(null)
+
+      // 🔹 Bitácora
+      const user = getUsuario()
+      const ip = await getUserIP()
+      const fecha_hora = getUserDateTime()
+      if (user) {
+        await registrarBitacora({
+          username: user.username,
+          ip,
+          fecha_hora,
+          accion: "Editar Visitante",
+          descripcion: `Se actualizó al visitante ${visitorData.nombre_completo}`,
+        })
+      }
     } catch (error: any) {
       alert("Error al actualizar visitante: " + error.message)
     }
   }
 
+  // 📌 Eliminar visitante + registrar en bitácora
   const handleDeleteVisitor = async (id: number) => {
     if (confirm("¿Deseas eliminar este visitante?")) {
       try {
+        const visitorToDelete = visitors.find((v) => v.id_visitante === id)
+
         await eliminarVisitante(id)
         const updated = await getAllVisitantes()
         setVisitors(updated)
+
+        // 🔹 Bitácora
+        const user = getUsuario()
+        const ip = await getUserIP()
+        const fecha_hora = getUserDateTime()
+        if (user && visitorToDelete) {
+          await registrarBitacora({
+            username: user.username,
+            ip,
+            fecha_hora,
+            accion: "Eliminar Visitante",
+            descripcion: `Se eliminó al visitante ${visitorToDelete.nombre_completo}`,
+          })
+        }
       } catch (error: any) {
         alert("Error al eliminar visitante: " + error.message)
       }
     }
   }
-
 
   const handleCloseModal = () => {
     setIsModalOpen(false)
